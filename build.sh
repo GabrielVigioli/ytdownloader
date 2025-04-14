@@ -1,6 +1,6 @@
 set -o errexit
 
+cd ytdownloader
 pip install -r requirements.txt
-
 python manage.py collectstatic --no-input
-python mange.py migrate
+python manage.py migrate
