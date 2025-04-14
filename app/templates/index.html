@@ -11,10 +11,11 @@
 </head>
 <body class="bg-neutral-900 text-white min-h-screen flex items-center justify-center px-4">
 
+  <!-- Conteúdo principal -->
   <div class="w-full max-w-xl p-6 bg-neutral-800 rounded-2xl shadow-xl space-y-6">
-
     <h1 class="text-3xl font-bold text-center text-white">YouTube Downloader</h1>
 
+    <!-- Formulário para inserção do link do vídeo -->
     <form method="post" class="flex flex-col space-y-4">
       {% csrf_token %}
       <input 
@@ -37,16 +38,18 @@
         <h2 class="text-lg font-semibold text-white">🎬 Título: <span class="text-rose-400">{{ title }}</span></h2>
         <p class="text-sm text-neutral-400 break-all">🔗 Link: {{ videolink }}</p>
 
-        <form method="post" class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
+        <!-- Botões para seleção do formato de download -->
+        <form id="download-form" method="post" class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
           {% csrf_token %}
           <input type="hidden" name="videolink" value="{{ videolink }}" />
-
-          <button name="choose" type="submit" value="1080" class="bg-neutral-700 hover:bg-rose-600 text-white py-2 rounded-lg font-medium transition-all">1080p</button>
-          <button name="choose" type="submit" value="720" class="bg-neutral-700 hover:bg-rose-600 text-white py-2 rounded-lg font-medium transition-all">720p</button>
-          <button name="choose" type="submit" value="480" class="bg-neutral-700 hover:bg-rose-600 text-white py-2 rounded-lg font-medium transition-all">480p</button>
-          <button name="choose" type="submit" value="360" class="bg-neutral-700 hover:bg-rose-600 text-white py-2 rounded-lg font-medium transition-all">360p</button>
-          <button name="choose" type="submit" value="audiom4a" class="bg-neutral-700 hover:bg-rose-600 text-white py-2 rounded-lg font-medium transition-all">Áudio .m4a</button>
-          <button name="choose" type="submit" value="audiomp4" class="bg-neutral-700 hover:bg-rose-600 text-white py-2 rounded-lg font-medium transition-all">Áudio .mp4</button>
+          <input type="hidden" id="choose-input" name="choose" value="" />
+        
+          <button type="button" data-choice="1080" class="download-btn bg-neutral-700 hover:bg-rose-600 text-white py-2 rounded-lg font-medium transition-all">1080p</button>
+          <button type="button" data-choice="720" class="download-btn bg-neutral-700 hover:bg-rose-600 text-white py-2 rounded-lg font-medium transition-all">720p</button>
+          <button type="button" data-choice="480" class="download-btn bg-neutral-700 hover:bg-rose-600 text-white py-2 rounded-lg font-medium transition-all">480p</button>
+          <button type="button" data-choice="360" class="download-btn bg-neutral-700 hover:bg-rose-600 text-white py-2 rounded-lg font-medium transition-all">360p</button>
+          <button type="button" data-choice="audiom4a" class="download-btn bg-neutral-700 hover:bg-rose-600 text-white py-2 rounded-lg font-medium transition-all">Áudio .m4a</button>
+          <button type="button" data-choice="audiomp4" class="download-btn bg-neutral-700 hover:bg-rose-600 text-white py-2 rounded-lg font-medium transition-all">Áudio .mp4</button>
         </form>
       </div>
     {% endif %}
@@ -56,8 +59,72 @@
         {{ error }}
       </div>
     {% endif %}
-
   </div>
+
+  <!-- Overlay com barra de progresso -->
+  <div id="loading-overlay" class="hidden fixed inset-0 z-50 bg-black opacity-90 flex items-center justify-center">
+    <div class="w-full max-w-lg px-6 flex flex-col items-center space-y-4">
+      
+      <!-- Barra de progresso -->
+      <div class="w-full h-4 bg-neutral-600 rounded-full overflow-hidden shadow-lg">
+        <div id="progress-bar" class="bg-rose-500 h-full w-0 transition-all duration-1000"></div>
+      </div>
+
+      <!-- Texto -->
+      <p class="text-white text-center font-medium"> Downloading Video ⌛</p>
+    </div>
+  </div>
+
+  <!-- Script JavaScript -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const buttons = document.querySelectorAll(".download-btn");
+      const form = document.getElementById("download-form");
+      const chooseInput = document.getElementById("choose-input");
+      const overlay = document.getElementById("loading-overlay");
+      const progressBar = document.getElementById("progress-bar");
+
+      buttons.forEach(button => {
+        button.addEventListener("click", async () => {
+          const choice = button.getAttribute("data-choice");
+          chooseInput.value = choice;
+          overlay.classList.remove("hidden");
+          progressBar.style.width = "0%";
+          let progress = 0;
+          const progressInterval = setInterval(() => {
+            if (progress < 400) {
+              progress += 4;  
+              progressBar.style.width = `${progress}%`;
+            }
+          }, 400);
+          const formData = new FormData(form);
+          const response = await fetch("/", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) {
+            alert("Erro ao iniciar o download.");
+            clearInterval(progressInterval);
+            overlay.classList.add("hidden");
+            return;
+          }
+          const blob = await response.blob();
+          const downloadUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          const filename = response.headers.get("Content-Disposition")?.split("filename=")[1]?.replace(/"/g, "") || "arquivo.mp4";
+          a.href = downloadUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(downloadUrl);
+          clearInterval(progressInterval);
+          overlay.classList.add("hidden");
+        });
+      });
+    });
+  </script>
 
 </body>
 </html>

@@ -36,7 +36,7 @@ def index(request):
         if videolink:
             try:
                 yt = YouTube(videolink)
-                video_id = str(uuid.uuid4())[:8] 
+                video_id = str(uuid.uuid4())[:8]
                 temp_dir = os.path.join("temp", video_id)
                 os.makedirs(temp_dir, exist_ok=True)
 
@@ -84,6 +84,10 @@ def index(request):
                                 filename=finalname,
                             )
 
+                            response["Access-Control-Expose-Headers"] = (
+                                "Content-Disposition"
+                            )
+
                             threading.Timer(
                                 30.0, limpar_pasta, args=(temp_dir,)
                             ).start()
@@ -109,6 +113,10 @@ def index(request):
                             open(filepath, "rb"),
                             as_attachment=True,
                             filename=audioname,
+                        )
+
+                        response["Access-Control-Expose-Headers"] = (
+                            "Content-Disposition"
                         )
                         threading.Timer(30.0, limpar_pasta, args=(temp_dir,)).start()
                         return response
